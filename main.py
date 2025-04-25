@@ -18,6 +18,6 @@ try:
         con.send(b'HTTP/1.0 200 OK\r\nContrnt-type: text/html\r\n\r\n')
         con.sendall(b'hi')
         con.sendall(data)
-        #print(data.find.__str__('GET')) 
+        print('find:   ', data.decode().find('19254')) 
 finally:
     s.close()
