@@ -15,9 +15,9 @@ try:
         print(con, add)
         data = con.recv(1024)
         print(data)
-        con.send(b'HTTP/1.0 200 OK\r\nContrnt-type: text/html\r\n\r\n')
-        con.sendall(b'hi')
+        con.send(b'HTTP/1.0 200 OK\r\nContent-type: text/json\r\n\r\n')
+        con.send(b'{"a":1, "c":"hi"}')
         con.sendall(data)
-        print('find:   ', data.decode().find('19254')) 
+        print('find:   ', data.decode().find('192')) 
 finally:
     s.close()
