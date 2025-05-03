@@ -14,13 +14,31 @@
     <button onclick="start()">start</button>
 
     <label for="ip">IP</label>
-   <input type="text" id="ip" name="ip" value="http://192.168.178.187:8080"><br><br>
+   <input type="text" id="ip" name="ip" value="http://192.168.178.187:8080">
+   <label for="ip">delay</label>
+   <input type="text" id="delay" name="delay" value="10" size="1">
+   <label for="ip">batch</label>
+   <input type="text" id="batch" name="batch" value="1" size="1">
+
+
+   <canvas  width="1000" height="500" id= "graph"></canvas>
+   <table id="dataTable">
+
+   </table> 
+   <p id="data">Data goes here</p>
+
 
   </body>
 
   <script>
         
     let data = []
+    let distances = []
+    let times = []
+    let timesAndDistances = []
+    let dataparagraph = document.getElementById("data")
+    let dataTable = document.getElementById("dataTable")
+
 
     async function start(){
       //console.log("Starting run")
@@ -32,17 +50,17 @@
           throw new Error(`Response status: ${response.status}`);
         }
         const json = await response.text();
-        console.log(json);
+       
+        // console.log(json);
       } catch (error) {
         console.error(error.message);
       }
-      getData()
-      setTimeout(getData, 1000)
+      getData(8)
     }
 
-    async function getData() {
+    async function getData(remaingReadings = 0) {
       //console.log("getting current data");
-      const url = document.getElementById("ip").value + "/data"
+      const url = document.getElementById("ip").value + "/data?x" + document.getElementById("batch").value +"y" + document.getElementById("delay").value  + "z"
       console.log("getting current data:   ", url);
       
       try {
@@ -53,13 +71,29 @@
         const json = await response.text();
         console.log(json);
         line = JSON.parse(json)
-        console.log()
+        //console.log(line.distances);
+        distances = line.distances
+        times = line.times.map(Number) //t => Number(t) - Number(times[0]))
+        times = times.map(t => Math.floor((t-times[0])*1000))
 
-        data[line.index] = line.val
-        console.log(data);
+
+        timesAndDistances = times.map((v, i) => [times[i], distances[i]]) 
+        //console.log(distances, times);
+        drawGraph(times, distances)
+
+        let timesAndDistancesTable = timesAndDistances.map(v => '<tr><td>'+ v[0] + '</td><td>' + v[1] +'</td></tr>')
+        console.log(timesAndDistancesTable.join(""));
         
+
+        // dataparagraph.innerHTML = timesAndDistances
+        dataTable.innerHTML = timesAndDistancesTable
       } catch (error) {
         console.error(error.message);
+      }
+
+      if (remaingReadings > 0){
+        //sleep(1).then(() => { getData(remaingReadings -1) });
+        getData(remaingReadings -1)
       }
       //butt()
     }
@@ -75,11 +109,36 @@
         }
         const json = await response.text();
         console.log(json);
+        
+
       } catch (error) {
         console.error(error.message);
       }
     }
 
+
+    function sleep(ms) {
+      return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    function drawGraph( times, distances, minX = 6000, minY = 2000){
+    ctx = document.getElementById('graph').getContext('2d')
+    ctx.clearRect(0,0,1000, 500)
+    ctx.moveTo (times[0]/10, distances[0]/2)
+    
+    // ctx.beginPath();
+    // ctx.moveTo(75, 50);
+    // ctx.lineTo(100, 75);
+    // ctx.lineTo(100, 25);
+    // ctx.fill();
+
+    ctx.beginPath()
+      times.forEach((t,i) => {
+        ctx.lineTo(t/5, 500 - distances[i]/10)
+      });
+      ctx.stroke()
+
+    }
 
         </script>
 </html>
