@@ -4,14 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
-    <title>Hosted datalogger program v0.1</title>
+    <title>Hosted datalogger program v0.11</title>
     <link rel="stylesheet" href="style.css">
   </head>
   <body>
 
-    <button onclick="getData()">Start</button>
-    <button onclick="downloadAll()">Download</button>
-    <button onclick="start()">start</button>
+    <button onclick="getData()">Collect Batch</button>
+    <button onclick="start()">Collect Run</button>
+    <button onclick="downloadAll()">Download Saved data</button>
 
     <label for="ip">IP</label>
    <input type="text" id="ip" name="ip" value="http://192.168.178.187:8080">
@@ -20,30 +20,23 @@
    <label for="ip">batch</label>
    <input type="text" id="batch" name="batch" value="1" size="1">
 
-
    <canvas  width="1000" height="500" id= "graph"></canvas>
-   <table id="dataTable">
-
-   </table> 
-   <p id="data">Data goes here</p>
-
+   
+   <table id="dataTable"></table> 
 
   </body>
 
   <script>
         
-    let data = []
     let distances = []
     let times = []
-    let timesAndDistances = []
-    let dataparagraph = document.getElementById("data")
     let dataTable = document.getElementById("dataTable")
 
 
     async function start(){
       //console.log("Starting run")
       const url = document.getElementById("ip").value + "/startRun"
-      console.log("Starting run:   ", url);
+      //console.log("Starting run:   ", url);
       try {
         const response = await fetch(url);
         if (!response.ok) {
@@ -74,19 +67,10 @@
         //console.log(line.distances);
         distances = line.distances
         times = line.times.map(Number) //t => Number(t) - Number(times[0]))
-        times = times.map(t => Math.floor((t-times[0])*1000))
+        times = 
+        displayData(times, distances)
 
 
-        timesAndDistances = times.map((v, i) => [times[i], distances[i]]) 
-        //console.log(distances, times);
-        drawGraph(times, distances)
-
-        let timesAndDistancesTable = timesAndDistances.map(v => '<tr><td>'+ v[0] + '</td><td>' + v[1] +'</td></tr>')
-        console.log(timesAndDistancesTable.join(""));
-        
-
-        // dataparagraph.innerHTML = timesAndDistances
-        dataTable.innerHTML = timesAndDistancesTable
       } catch (error) {
         console.error(error.message);
       }
@@ -97,6 +81,23 @@
       }
       //butt()
     }
+
+
+    function displayData(t, d){
+      let tt = times.map(t => Math.floor((t-times[0])*1000))
+      let timesAndDistances = times.map((v, i) => [tt[i], d[i]]) 
+        //console.log(distances, times);
+
+        
+        drawGraph(tt, distances)
+
+        let timesAndDistancesTable = timesAndDistances.map(v => '<tr><td>'+ v[0] + '</td><td>' + v[1] +'</td></tr>')
+        console.log(timesAndDistancesTable.join(""));
+        
+
+        dataTable.innerHTML = '<tr><th>time, t /s</th><th>distance, x /m</th></tr>' + timesAndDistancesTable.join("")
+    }
+
 
     async function downloadAll() {
       //console.log("Download all");
