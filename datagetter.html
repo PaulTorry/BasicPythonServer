@@ -1,208 +1,189 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="X-UA-Compatible" content="ie=edge">
-    <title>Hosted datalogger program v0.11</title>
-  </head>
-  <body onload="changeDisplayedIP()">
 
-    <label for="ip">IP</label>
-    <input type="text" id="ip" name="ip" onchange="changeStoredIP()" value="http://192.168.178.187:8080">
-    <label for="ip">delay</label>
-    <input type="text" id="delay" name="delay" value="10" size="1">
-    <label for="ip">batch</label>
-    <input type="text" id="batch" name="batch" value="1" size="1">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>Datalogger program v0.12</title>
+</head>
 
-    <br />
-    <br />
-    <button onclick="getData()">Collect Batch</button>
-    <button onclick="start()">Collect Run</button>
-    <button onclick="downloadAll()">Download Saved data</button>
+<body onload="changeDisplayedIP()">
 
-    <br />
-    <br />
+  <label for="ip">IP</label>
+  <input type="text" id="ip" name="ip" onchange="changeStoredIP()" value="http://192.168.178.187:8080">
+  <label for="ip">delay</label>
+  <input type="text" id="delay" name="delay" value="10" size="1">
+  <label for="ip">batch</label>
+  <input type="text" id="batch" name="batch" value="1" size="1">
 
-    <label for="maxx">max x</label>
-    <input type="number" id="maxx" name="maxx" value="2550" size="2" onchange="displayData()">
-    <label for="maxy">max y</label>
-    <input type="number" id="maxy" name="maxy" value="1000" size="2" onchange="displayData()">
+  <br />
+  <br />
+  <button onclick="getData()">Collect Batch</button>
+  <button onclick="start()">Collect Run</button>
+  <button onclick="downloadAll()">Download Saved data</button>
 
-   <canvas  width="1000" height="515" id= "graph"></canvas>
-   <table id="dataTable"></table> 
+  <br />
+  <br />
 
-  </body>
+  <label for="maxx">max x</label>
+  <input type="number" id="maxx" name="maxx" value="2550" size="2" onchange="displayData()">
+  <label for="maxy">max y</label>
+  <input type="number" id="maxy" name="maxy" value="1000" size="2" onchange="displayData()">
 
-  <script>
-        
-    let distances = []
-    let times = []
-    let dataTable = document.getElementById("dataTable")
+  <canvas width="1000" height="515" id="graph"></canvas>
+  <table id="dataTable"></table>
 
-    function changeStoredIP(){
-      localStorage.setItem("IP", JSON.stringify(document.getElementById("ip").value))
-      console.log(JSON.parse(localStorage.getItem("IP")));
-    }
+</body>
 
-    function changeDisplayedIP(){
-      console.log("old", document.getElementById("ip").value);
-      document.getElementById("ip").value = JSON.parse(localStorage.getItem("IP"))
-      
-      console.log("new", document.getElementById("ip").value);
-    }
+<script>
+
+  let distances = []
+  let times = []
 
 
-    async function start(){
-      //console.log("Starting run")
-      const url = document.getElementById("ip").value + "/startRun"
-      //console.log("Starting run:   ", url);
-      try {
-        const response = await fetch(url);
-        if (!response.ok) {
-          throw new Error(`Response status: ${response.status}`);
-        }
-        const json = await response.text();
-       
-        // console.log(json);
-      } catch (error) {
-        console.error(error.message);
+  let dataTable = document.getElementById("dataTable")
+
+
+
+  function changeStoredIP() {
+    localStorage.setItem("IP", JSON.stringify(document.getElementById("ip").value))
+    console.log(JSON.parse(localStorage.getItem("IP")));
+  }
+
+  function changeDisplayedIP() {
+    console.log("old", document.getElementById("ip").value);
+    document.getElementById("ip").value = JSON.parse(localStorage.getItem("IP"))
+    console.log("new", document.getElementById("ip").value);
+  }
+
+
+  async function start() {
+    //console.log("Starting run")
+    const url = document.getElementById("ip").value + "/startRun"
+    //console.log("Starting run:   ", url);
+    try {
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error(`Response status: ${response.status}`);
       }
-      getData(8)
+      const json = await response.text();
+
+      // console.log(json);
+    } catch (error) {
+      console.error(error.message);
     }
+    getData(8)
+  }
 
-    const consecutiveDifference = arr => {
-   const res = [];
-   for(let i = 0; i < arr.length; i++){
-      if(arr[i + 1]){
-         res.push(arr[i+1] - arr[i]);
-      };
-   };
-   return res;
-};
+  const consecutiveDifference = arr => {
+    const res = [];
+    for (let i = 0; i < arr.length; i++) {
+      if (arr[i + 1]) {res.push(arr[i + 1] - arr[i]);};
+    };
+    return res;
+  };
 
-    async function getData(remaingReadings = 0) {
-      //console.log("getting current data");
-      const url = document.getElementById("ip").value + "/data?x" + document.getElementById("batch").value +"y" + document.getElementById("delay").value  + "z"
-      console.log("getting current data:   ", url);
-      
-      try {
-        const response = await fetch(url);
-        if (!response.ok) {
-          throw new Error(`Response status: ${response.status}`);
-        }
-        const json = await response.text();
-        console.log(json);
-        line = JSON.parse(json)
-        //console.log(line.distances);
-        distances = line.distances
-        times = line.times.map(Number) //t => Number(t) - Number(times[0]))
-        // times = 
+  async function getData(remaingReadings = 0) {
+    //console.log("getting current data");
+    const url = document.getElementById("ip").value + "/data?x" + document.getElementById("batch").value + "y" + document.getElementById("delay").value + "z"
+    console.log("getting current data:   ", url);
 
+    try {
+      const response = await fetch(url);
+      if (!response.ok) {        throw new Error(`Response status: ${response.status}`);      }
+      const json = await response.text();
+      line = JSON.parse(json)
+      distances = line.distances
+      times = line.times.map(Number) 
 
-        
-        displayData(times, distances)
+      displayData()
 
+    } catch (error) {console.error(error.message);}
 
-      } catch (error) {
-        console.error(error.message);
-      }
-
-      if (remaingReadings > 0){
-        //sleep(1).then(() => { getData(remaingReadings -1) });
-        getData(remaingReadings -1)
-      }
-      //butt()
+    if (remaingReadings > 0) {
+      //sleep(1).then(() => { getData(remaingReadings -1) });
+      getData(remaingReadings - 1)
     }
+  }
 
 
-    function displayData(){
+  function displayData() {
 
     let scaleX = document.getElementById("maxx").value
     let scaleY = document.getElementById("maxy").value
 
-      console.log(scaleX, scaleY);
-      let dt = consecutiveDifference(times)
-         let dx = consecutiveDifference(distances)
-         let speeds = dx.map((v,i) => dx[i]-dt[i])
-         console.log(dt, dx, speeds);
+    console.log(scaleX, scaleY);
+    let dt = consecutiveDifference(times)
+    let dx = consecutiveDifference(distances)
+    let speeds = dx.map((v, i) => dx[i] - dt[i])
+    console.log(dt, dx, speeds);
 
-      let tt = times.map(t => Math.floor((t-times[0])*1000))
-      let timesAndDistances = times.map((v, i) => [tt[i], distances[i]]) 
+    let tt = times.map(t => Math.floor((t - times[0]) * 1000))
+    let timesAndDistances = times.map((v, i) => [tt[i], distances[i]])
 
-        //console.log(distances, times);
+    drawGraph(tt, distances, speeds, scaleX, scaleY)
 
-        
-        drawGraph(tt, distances, speeds, scaleX, scaleY)
+    let timesAndDistancesTable = timesAndDistances.map(v => '<tr><td>' + v[0] + '</td><td>' + v[1] + '</td></tr>')
+    console.log(timesAndDistancesTable.join(""));
 
-        let timesAndDistancesTable = timesAndDistances.map(v => '<tr><td>'+ v[0] + '</td><td>' + v[1] +'</td></tr>')
-        console.log(timesAndDistancesTable.join(""));
-        
-
-        dataTable.innerHTML = '<tr><th>time, t /s</th><th>distance, x /m</th></tr>' + timesAndDistancesTable.join("")
-    }
+    dataTable.innerHTML = '<tr><th>time, t /s</th><th>distance, x /m</th></tr>' + timesAndDistancesTable.join("")
+  }
 
 
-    async function downloadAll() {
-      //console.log("Download all");
-      const url = document.getElementById("ip").value + "/allData"
-      console.log("Download all:  ",   url);
-      try {
-        const response = await fetch(url);
-        if (!response.ok) {
-          throw new Error(`Response status: ${response.status}`);
-        }
-        const json = await response.text();
-        console.log(json);
-        
-
-      } catch (error) {
-        console.error(error.message);
+  async function downloadAll() {
+    //console.log("Download all");
+    const url = document.getElementById("ip").value + "/allData"
+    console.log("Download all:  ", url);
+    try {
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error(`Response status: ${response.status}`);
       }
+      const json = await response.text();
+      console.log(json);
+
+
+    } catch (error) {
+      console.error(error.message);
     }
+  }
 
 
-    function sleep(ms) {
-      return new Promise(resolve => setTimeout(resolve, ms));
-    }
+  function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
 
-    function drawGraph( times, distances, speeds, scaleX = 2600, scaleY = 2000){
-      console.log(scaleX, scaleY);
-      
+  function drawGraph(times, distances, speeds, maxX = 2600, maxY = 2000) {
+    //console.log(scaleX, scaleY);
+
+    let scaleX  = (2600 / maxX)
+    let scaleY  = (1000 / maxY)
+
     ctx = document.getElementById('graph').getContext('2d')
-    ctx.clearRect(0,0,1000, 600)
-    ctx.moveTo (times[0]*(2600/scaleX), distances[0]* scaleY/2000)
-    
-    // ctx.beginPath();
-    // ctx.moveTo(75, 50);
-    // ctx.lineTo(100, 75);
-    // ctx.lineTo(100, 25);
-    // ctx.fill();
-    ctx.stroke();
-    
-ctx.strokeStyle = "blue";
-    ctx.beginPath()
-      times.forEach((t,i) => {
-        ctx.lineTo(t*(2600/scaleX), 500 - distances[i]* scaleY/2000)
-      });
-      ctx.stroke()
+    ctx.clearRect(0, 0, 1000, 600)
+    ctx.moveTo(times[0]*scaleX, distances[0] * scaleY)
 
-      ctx.moveTo (times[0]*(2600/scaleX), speeds[0]* scaleY/2000)
-    
-    // ctx.beginPath();
-    // ctx.moveTo(75, 50);
-    // ctx.lineTo(100, 75);
-    // ctx.lineTo(100, 25);
-    // ctx.fill();
+    ctx.stroke();
+
+    ctx.strokeStyle = "blue";
+    ctx.beginPath()
+    times.forEach((t, i) => {
+      ctx.lineTo(t*scaleX, 500 - distances[i] * scaleY)
+    });
+    ctx.stroke()
+
+    ctx.moveTo(times[0] * scaleX, speeds[0] * scaleY)
 
     ctx.strokeStyle = "red";
     ctx.beginPath()
-      times.forEach((t,i) => {
-        ctx.lineTo(t*(2600/scaleX), 500 - speeds[i]* scaleY/2000)
-      });
-      ctx.stroke()
+    times.forEach((t, i) => {
+      ctx.lineTo(t * scaleX, 500 - speeds[i] * scaleY)
+    });
+    ctx.stroke()
 
-    }
+  }
 
-        </script>
+</script>
+
 </html>
