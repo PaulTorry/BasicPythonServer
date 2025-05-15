@@ -8,10 +8,12 @@
   <title>Datalogger program v0.12</title>
 </head>
 
-<body onload="changeDisplayedIP()">
+<body onload="changeDisplayedIP();changeDisplayedPort();displayData()">
 
   <label for="ip">IP</label>
-  <input type="text" id="ip" name="ip" onchange="changeStoredIP()" value="http://192.168.178.187:8080">
+  <input type="text" id="ip" name="ip" onchange="changeStoredIP()" value="192.168.178.187">
+  <label for="port">IP</label>
+  <input type="text" id="port" name="port" onchange="changeStoredPort()" value="8080">
   <label for="ip">delay</label>
   <input type="text" id="delay" name="delay" value="10" size="1">
   <label for="ip">batch</label>
@@ -27,9 +29,14 @@
   <br />
 
   <label for="maxx">max x</label>
-  <input type="number" id="maxx" name="maxx" value="2550" size="2" onchange="displayData()">
+  <input type="number" id="maxx" name="maxx" value="2550" style="width: 4em" onchange="displayData()">
   <label for="maxy">max y</label>
-  <input type="number" id="maxy" name="maxy" value="1000" size="2" onchange="displayData()">
+  <input type="number" id="maxy" name="maxy" value="1000" style="width: 4em" onchange="displayData()">
+
+  <label for="ts">trend start</label>
+  <input type="number" id="ts" name="ts" value="100" style="width: 4em" onchange="displayData()">
+  <label for="te">trend end</label>
+  <input type="number" id="te" name="te" value="200" style="width: 4em" onchange="displayData()">
 
   <canvas width="1000" height="515" id="graph"></canvas>
   <table id="dataTable"></table>
@@ -38,13 +45,15 @@
 
 <script>
 
-  let distances = []
-  let times = []
+  let distances = [145,249,288,347,399,456,523,580,662,742,742]
+  let times = [0.622,0.986,1.087,1.194,1.295,1.377,1.479,1.548,1.649,1.719,1.82]
 
 
   let dataTable = document.getElementById("dataTable")
 
-
+  function dragMouse(e){
+    
+  }
 
   function changeStoredIP() {
     localStorage.setItem("IP", JSON.stringify(document.getElementById("ip").value))
@@ -57,10 +66,20 @@
     console.log("new", document.getElementById("ip").value);
   }
 
+  function changeStoredPort() {
+    localStorage.setItem("Port", JSON.stringify(document.getElementById("port").value))
+    console.log(JSON.parse(localStorage.getItem("Port")));
+  }
+
+  function changeDisplayedPort() {
+    console.log("old", document.getElementById("port").value);
+    document.getElementById("port").value = JSON.parse(localStorage.getItem("Port"))
+    console.log("new", document.getElementById("port").value);
+  }
 
   async function start() {
     //console.log("Starting run")
-    const url = document.getElementById("ip").value + "/startRun"
+    const url = "http://" + document.getElementById("ip").value + ":" + document.getElementById("port").value  + "/startRun" 
     //console.log("Starting run:   ", url);
     try {
       const response = await fetch(url);
@@ -86,12 +105,12 @@
 
   async function getData(remaingReadings = 0) {
     //console.log("getting current data");
-    const url = document.getElementById("ip").value + "/data?x" + document.getElementById("batch").value + "y" + document.getElementById("delay").value + "z"
+    const url = "http://" + document.getElementById("ip").value + ":" + document.getElementById("port").value  + "/data?x" + document.getElementById("batch").value + "y" + document.getElementById("delay").value + "z"
     console.log("getting current data:   ", url);
 
     try {
       const response = await fetch(url);
-      if (!response.ok) {        throw new Error(`Response status: ${response.status}`);      }
+      if (!response.ok) { throw new Error(`Response status: ${response.status}`);      }
       const json = await response.text();
       line = JSON.parse(json)
       distances = line.distances
@@ -133,7 +152,7 @@
 
   async function downloadAll() {
     //console.log("Download all");
-    const url = document.getElementById("ip").value + "/allData"
+    const url = "http://" + document.getElementById("ip").value + ":" + document.getElementById("port").value  + "/allData"
     console.log("Download all:  ", url);
     try {
       const response = await fetch(url);
