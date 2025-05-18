@@ -45,7 +45,7 @@
 
 <script>
 
-  let distances = [145,249,288,347,399,456,523,580,662,742,742]
+  let distances = [145,249,288,347,399,456,523,480,662,742,742]
   let times = [0.622,0.986,1.087,1.194,1.295,1.377,1.479,1.548,1.649,1.719,1.82]
   //let lastX = 0
   let cWidth = 1000
@@ -55,44 +55,36 @@
 
   let mouseScale = 1
 
-  let scaleX = document.getElementById("maxx").value
-  let scaleY = document.getElementById("maxy").value
+  let maxX = document.getElementById("maxx").value
+  let maxY = document.getElementById("maxy").value
+
 
 
   let dataTable = document.getElementById("dataTable")
   
   document.getElementById('graph').addEventListener('mousedown', mouseDown)
-  document.getElementById('graph').addEventListener('mousedown', mouseUp)
   
   
 
 function mouseDown(e){
-  if(!clickMouseX && !clickMouseY)
-  clickMouseX = e.offsetX
-  clickMouseY = e.offsetY
+    clickMouseX = e.offsetX
+    clickMouseY = e.offsetY
   document.getElementById('graph').addEventListener('mousemove', dragMouse)
 }
-
-function mouseUp(e){
-  if(!clickMouseX && !clickMouseY)
-  clickMouseX = 0
-  clickMouseY = 0
-  document.getElementById('graph').addEventListener('mousemove', dragMouse)
-}
-
 
   function dragMouse(e){
-    console.log(  clickMouseX , e.offsetX);
+    // console.log(  clickMouseX , e.offsetX);
     
         if (event.buttons == 0) {
-          console.log("remove mouse");
-          
           document.getElementById('graph').removeEventListener("mousemove", dragMouse);
-            } else {
-      console.log(event.offsetX, event.offsetY )//- document.getElementById('graph').getBoundingClientRect().y)
-       console.log(document.getElementById('graph').getBoundingClientRect())
-       scaleX = 0.5 * cWidth * cWidth / e.offsetX
-      //lastX = event.clientX;
+         } else {
+    //  console.log(event.offsetX, event.offsetY )//- document.getElementById('graph').getBoundingClientRect().y)
+      // console.log(document.getElementById('graph').getBoundingClientRect())
+       maxX *= 1 - (e.offsetX - clickMouseX) / clickMouseX
+      // console.log(maxX);
+       
+       document.getElementById("maxx").value = maxX
+      clickMouseX = e.offsetX;
     }  
     displayData()
   }
@@ -171,22 +163,22 @@ function mouseUp(e){
 
   function displayData() {
 
-    // scaleX = document.getElementById("maxx").value
-    // scaleY = document.getElementById("maxy").value
+     scaleX = document.getElementById("maxx").value
+     scaleY = document.getElementById("maxy").value
 
-    console.log(scaleX, scaleY);
+    // console.log(scaleX, maxY);
     let dt = consecutiveDifference(times)
     let dx = consecutiveDifference(distances)
     let speeds = dx.map((v, i) => dx[i] - dt[i])
-    console.log(dt, dx, speeds);
+    // console.log(dt, dx, speeds);
 
     let tt = times.map(t => Math.floor((t - times[0]) * 1000))
     let timesAndDistances = times.map((v, i) => [tt[i], distances[i]])
 
-    drawGraph(tt, distances, speeds, scaleX, scaleY)
+    drawGraph(tt, distances, speeds, scaleX, maxY)
 
     let timesAndDistancesTable = timesAndDistances.map(v => '<tr><td>' + v[0] + '</td><td>' + v[1] + '</td></tr>')
-    console.log(timesAndDistancesTable.join(""));
+    // console.log(timesAndDistancesTable.join(""));
 
     dataTable.innerHTML = '<tr><th>time, t /s</th><th>distance, x /m</th></tr>' + timesAndDistancesTable.join("")
   }
@@ -215,11 +207,17 @@ function mouseUp(e){
     return new Promise(resolve => setTimeout(resolve, ms));
   }
 
+
   function drawGraph(times, distances, speeds, maxX = 2600, maxY = 2000) {
     //console.log(scaleX, scaleY);
 
-    let scaleX  = (2600 / maxX)
-    let scaleY  = (1000 / maxY)
+
+    let scaleX  = (cWidth / maxX)
+    let scaleY  = (cHeight / maxY)
+
+    let xAxisOffset = 40
+
+    //console.log(getLabels(0, maxX, 12))
 
     ctx = document.getElementById('graph').getContext('2d')
     ctx.clearRect(0, 0, cWidth, cHeight)
@@ -229,17 +227,55 @@ function mouseUp(e){
 
     ctx.strokeStyle = "blue";
     ctx.beginPath()
-    times.forEach((t, i) => { ctx.lineTo(t*scaleX, cHeight - distances[i] * scaleY) });
+    times.forEach((t, i) => { ctx.lineTo(t*scaleX, cHeight - xAxisOffset - distances[i] * scaleY) });
     ctx.stroke()
 
     ctx.moveTo(times[0] * scaleX, speeds[0] * scaleY)
 
     ctx.strokeStyle = "red";
     ctx.beginPath()
-    times.forEach((t, i) => { ctx.lineTo(t * scaleX, cHeight - speeds[i] * scaleY) });
+    times.forEach((t, i) => { ctx.lineTo(t * scaleX, cHeight - xAxisOffset - speeds[i] * scaleY) });
     ctx.stroke()
 
+    ctx.strokeStyle = "black";
+    getLabels(0, maxX, 12).forEach(v => {
+      console.log(v);
+      ctx.beginPath()    
+      ctx.moveTo( v * scaleX, cHeight - xAxisOffset + 0)
+      ctx.lineTo( v * scaleX, cHeight - xAxisOffset + 20)
+      ctx.stroke()
+      ctx.fillText(v, v * scaleX, cHeight - xAxisOffset + 20)
+    })
+    getLabels(0, maxX, 12).map(v => v/10).forEach(v => {
+      console.log(v);
+      ctx.beginPath()    
+      ctx.moveTo( v * scaleX, cHeight - xAxisOffset + 0)
+      ctx.lineTo( v * scaleX, cHeight - xAxisOffset + 10)
+      ctx.stroke()
+      ctx.fillText(v, v * scaleX, cHeight - xAxisOffset + 20)
+    })
   }
+
+  function getLabels(start, end, maxAxisPoints = 7){
+    let range = Number((end-start).toPrecision(1))
+    let exp = Math.floor( Math.log10(range))
+    let man = range / 10**exp
+    let mult = 1
+   // console.log( start, end, maxAxisPoints, range, exp, man);
+   let t = 0
+  //  while(t < 10){
+  //       // console.log( start, end, maxAxisPoints, range, exp, man, "mult", mult);
+  //   if (man*mult <= maxAxisPoints && man*mult >= (maxAxisPoints / 2)) return [...Array(Math.ceil(mult*man)).keys()].map(v => v*(10**exp))
+  //   if (man*mult > maxAxisPoints) mult /= 2
+  //   else if (man*mult < (maxAxisPoints / 2)) mult *= 2
+  //   console.log( start, end, maxAxisPoints, range, exp, man, "mult", mult);
+  //      t+=1
+  //  }
+   return [...Array(10).keys()].map(v => v*(10**exp))
+
+  }
+
+  getLabels(2.00232, 78.332 )
 
 </script>
 
