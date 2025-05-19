@@ -28,10 +28,11 @@
   <br />
   <br />
 
-  <label for="maxx">max x</label>
+  <!-- <label for="maxx">max x</label>
   <input type="number" id="maxx" name="maxx" value="2550" style="width: 4em" onchange="displayData()">
   <label for="maxy">max y</label>
   <input type="number" id="maxy" name="maxy" value="1000" style="width: 4em" onchange="displayData()">
+ --->
 
   <label for="ts">trend start</label>
   <input type="number" id="ts" name="ts" value="100" style="width: 4em" onchange="displayData()">
@@ -55,10 +56,12 @@
 
   let mouseScale = 1
 
-  let maxX = document.getElementById("maxx").value
-  let maxY = document.getElementById("maxy").value
-
-
+  let maxX = 1000
+  let maxY = 1000
+  let minX = 0
+  let minY = 0
+  let yAxisOffset = 40
+  let xAxisOffset = 40
 
   let dataTable = document.getElementById("dataTable")
   
@@ -80,11 +83,10 @@ function mouseDown(e){
          } else {
     //  console.log(event.offsetX, event.offsetY )//- document.getElementById('graph').getBoundingClientRect().y)
       // console.log(document.getElementById('graph').getBoundingClientRect())
-       maxX *= 1 - (e.offsetX - clickMouseX) / clickMouseX
-      // console.log(maxX);
-       
-       document.getElementById("maxx").value = maxX
-      clickMouseX = e.offsetX;
+
+      if (e.offsetY > cHeight - 40) minX += (e.offsetX - clickMouseX), maxX += (e.offsetX - clickMouseX)
+      else maxX = (maxX - xAxisOffset)* (1 - (e.offsetX - clickMouseX) / clickMouseX) + xAxisOffset
+       clickMouseX = e.offsetX;
     }  
     displayData()
   }
@@ -163,8 +165,6 @@ function mouseDown(e){
 
   function displayData() {
 
-     scaleX = document.getElementById("maxx").value
-     scaleY = document.getElementById("maxy").value
 
     // console.log(scaleX, maxY);
     let dt = consecutiveDifference(times)
@@ -175,7 +175,7 @@ function mouseDown(e){
     let tt = times.map(t => Math.floor((t - times[0]) * 1000))
     let timesAndDistances = times.map((v, i) => [tt[i], distances[i]])
 
-    drawGraph(tt, distances, speeds, scaleX, maxY)
+    drawGraph(tt, distances, speeds)
 
     let timesAndDistancesTable = timesAndDistances.map(v => '<tr><td>' + v[0] + '</td><td>' + v[1] + '</td></tr>')
     // console.log(timesAndDistancesTable.join(""));
@@ -208,53 +208,65 @@ function mouseDown(e){
   }
 
 
-  function drawGraph(times, distances, speeds, maxX = 2600, maxY = 2000) {
+  function drawGraph(times, distances, speeds) {
     //console.log(scaleX, scaleY);
 
 
-    let scaleX  = (cWidth / maxX)
+    let scaleX  = (cWidth / (maxX - minX))
     let scaleY  = (cHeight / maxY)
 
-    let xAxisOffset = 40
+
 
     //console.log(getLabels(0, maxX, 12))
 
     ctx = document.getElementById('graph').getContext('2d')
     ctx.clearRect(0, 0, cWidth, cHeight)
-    ctx.moveTo(times[0]*scaleX, distances[0] * scaleY)
+    ctx.moveTo((times[0] + minX)*scaleX, distances[0] * scaleY)
 
     ctx.stroke();
 
     ctx.strokeStyle = "blue";
     ctx.beginPath()
-    times.forEach((t, i) => { ctx.lineTo(t*scaleX, cHeight - xAxisOffset - distances[i] * scaleY) });
+    times.forEach((t, i) => { ctx.lineTo((t + minX)*scaleX + xAxisOffset, cHeight - yAxisOffset - (distances[i] + minY ) * scaleY) });
     ctx.stroke()
 
-    ctx.moveTo(times[0] * scaleX, speeds[0] * scaleY)
+    ctx.moveTo((times[0] + minX) * scaleX, speeds[0] * scaleY)
 
     ctx.strokeStyle = "red";
     ctx.beginPath()
-    times.forEach((t, i) => { ctx.lineTo(t * scaleX, cHeight - xAxisOffset - speeds[i] * scaleY) });
+    times.forEach((t, i) => { ctx.lineTo((t + minX)* scaleX + xAxisOffset, cHeight - yAxisOffset - (speeds[i] + minY ) * scaleY) });
     ctx.stroke()
 
     ctx.strokeStyle = "black";
-    getLabels(0, maxX, 12).forEach(v => {
-      console.log(v);
+
+    drawAxisY(getLabels(minY, maxY, 12), scaleY, 20)
+    drawAxisY(getLabels(minY, maxY, 12).map(v => v/10), scaleY)
+    drawAxisX(getLabels(minX, maxX, 12).map(v => v/10), scaleX)
+    drawAxisX(getLabels(minX, maxX, 12), scaleX, 20)
+  }
+
+  function drawAxisX(arr, scaleX, tick = 10){
+    arr.forEach(v => {
       ctx.beginPath()    
-      ctx.moveTo( v * scaleX, cHeight - xAxisOffset + 0)
-      ctx.lineTo( v * scaleX, cHeight - xAxisOffset + 20)
+      ctx.moveTo( (v + minX) * scaleX + xAxisOffset, cHeight - yAxisOffset + 0)
+      ctx.lineTo( (v + minX) * scaleX + xAxisOffset, cHeight - yAxisOffset + tick)
       ctx.stroke()
-      ctx.fillText(v, v * scaleX, cHeight - xAxisOffset + 20)
-    })
-    getLabels(0, maxX, 12).map(v => v/10).forEach(v => {
-      console.log(v);
-      ctx.beginPath()    
-      ctx.moveTo( v * scaleX, cHeight - xAxisOffset + 0)
-      ctx.lineTo( v * scaleX, cHeight - xAxisOffset + 10)
-      ctx.stroke()
-      ctx.fillText(v, v * scaleX, cHeight - xAxisOffset + 20)
+      ctx.fillText(v, (v + minX) * scaleX + xAxisOffset, cHeight - yAxisOffset + 20)
     })
   }
+
+  function drawAxisY(arr, scaleY, tick = 10){
+    console.log(arr);
+    
+    arr.forEach(v => {
+      ctx.beginPath()    
+      ctx.moveTo( xAxisOffset + 0, cHeight - yAxisOffset - (v + minY) * scaleY )
+      ctx.lineTo( xAxisOffset - tick, cHeight - yAxisOffset - (v + minY) * scaleY  )
+      ctx.stroke()
+      ctx.fillText(v, xAxisOffset, cHeight - yAxisOffset + (v + minY) * scaleY + 20)
+    })
+  }
+
 
   function getLabels(start, end, maxAxisPoints = 7){
     let range = Number((end-start).toPrecision(1))
