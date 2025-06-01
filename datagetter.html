@@ -45,7 +45,7 @@
 </body>
 
 <script>
-
+  let p1 = [0,0], p2 = [500,500]
   let distances = [145,249,288,347,399,456,523,480,662,742,742]
   let times = [0.622,0.986,1.087,1.194,1.295,1.377,1.479,1.548,1.649,1.719,1.82]
   //let lastX = 0
@@ -66,8 +66,15 @@
   let dataTable = document.getElementById("dataTable")
   
   document.getElementById('graph').addEventListener('mousedown', mouseDown)
+  document.getElementById('graph').addEventListener('click', click)
   
-  
+
+function click(e) {
+    p1[0] = (e.offsetX - xAxisOffset - minX ) * (maxX - minX) / (cWidth - xAxisOffset)  - xAxisOffset
+    p1[1] = cHeight - e.offsetY
+    console.log(p1);
+    displayData()
+}
 
 function mouseDown(e){
     clickMouseX = e.offsetX
@@ -81,12 +88,23 @@ function mouseDown(e){
         if (event.buttons == 0) {
           document.getElementById('graph').removeEventListener("mousemove", dragMouse);
          } else {
-    //  console.log(event.offsetX, event.offsetY )//- document.getElementById('graph').getBoundingClientRect().y)
+      //  console.log(event.offsetX, event.offsetY )//- document.getElementById('graph').getBoundingClientRect().y)
       // console.log(document.getElementById('graph').getBoundingClientRect())
 
-      if (e.offsetY > cHeight - 40) minX += (e.offsetX - clickMouseX), maxX += (e.offsetX - clickMouseX)
-      else maxX = (maxX - xAxisOffset)* (1 - (e.offsetX - clickMouseX) / clickMouseX) + xAxisOffset
-       clickMouseX = e.offsetX;
+      if (e.offsetY > cHeight - 40){
+        let dev = (e.offsetX - clickMouseX) * (maxX - minX) / (cWidth)
+        minX += dev
+        maxX += dev
+      } else if (e.offsetX < 40){
+        let devv = (e.offsetY - clickMouseY) * (maxY - minY) / (cHeight)
+        minY -= devv
+        maxY -= devv
+      } else {
+        maxX = (maxX - xAxisOffset)* (1 + (clickMouseX - e.offsetX) / clickMouseX) + xAxisOffset
+        maxY = (maxY - yAxisOffset)* (1 + (e.offsetY - clickMouseY) / clickMouseY) + yAxisOffset
+      } 
+      clickMouseX = e.offsetX
+      clickMouseY = e.offsetY
     }  
     displayData()
   }
@@ -213,7 +231,7 @@ function mouseDown(e){
 
 
     let scaleX  = (cWidth / (maxX - minX))
-    let scaleY  = (cHeight / maxY)
+    let scaleY  = (cHeight / (maxY - minY))
 
 
 
@@ -243,6 +261,8 @@ function mouseDown(e){
     drawAxisY(getLabels(minY, maxY, 12).map(v => v/10), scaleY)
     drawAxisX(getLabels(minX, maxX, 12).map(v => v/10), scaleX)
     drawAxisX(getLabels(minX, maxX, 12), scaleX, 20)
+
+    drawPoint((p1[0] + minX) * scaleX + xAxisOffset, cHeight - yAxisOffset - (p1[1] + minY) * scaleY)
   }
 
   function drawAxisX(arr, scaleX, tick = 10){
@@ -256,16 +276,28 @@ function mouseDown(e){
   }
 
   function drawAxisY(arr, scaleY, tick = 10){
-    console.log(arr);
+    // console.log(arr);
     
     arr.forEach(v => {
       ctx.beginPath()    
       ctx.moveTo( xAxisOffset + 0, cHeight - yAxisOffset - (v + minY) * scaleY )
       ctx.lineTo( xAxisOffset - tick, cHeight - yAxisOffset - (v + minY) * scaleY  )
       ctx.stroke()
-      ctx.fillText(v, xAxisOffset, cHeight - yAxisOffset + (v + minY) * scaleY + 20)
+      ctx.fillText(v, xAxisOffset, cHeight - yAxisOffset - (v + minY) * scaleY)
     })
+
+
+
   }
+
+    function drawPoint(x, y){
+      ctx.beginPath()    
+      ctx.moveTo( x - 10, y - 10)
+      ctx.lineTo( x + 10, y + 10)
+      ctx.moveTo( x - 10, y + 10)
+      ctx.lineTo( x + 10, y - 10)
+      ctx.stroke()
+    }
 
 
   function getLabels(start, end, maxAxisPoints = 7){
