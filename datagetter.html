@@ -45,7 +45,7 @@
 </body>
 
 <script>
-  let p1 = [0,0], p2 = [500,500]
+  let p1 = [0,0], p2 = [0,0]
   let distances = [145,249,288,347,399,456,523,480,662,742,742]
   let times = [0.622,0.986,1.087,1.194,1.295,1.377,1.479,1.548,1.649,1.719,1.82]
   //let lastX = 0
@@ -55,31 +55,69 @@
   let clickMouseY = 0
 
   let mouseScale = 1
-
+  let nextPointIsOne = true
   let maxX = 1000
   let maxY = 1000
   let minX = 0
   let minY = 0
   let yAxisOffset = 40
   let xAxisOffset = 40
+  let mdTime = 0
 
   let dataTable = document.getElementById("dataTable")
   
   document.getElementById('graph').addEventListener('mousedown', mouseDown)
   document.getElementById('graph').addEventListener('click', click)
   
+function convertX_M_G (a, o = xAxisOffset, mx = maxX, mi = minX, c = cWidth ){
+   return(((a - o) * ((mx - mi) / c)) - mi)
+}
+
+function convertY_M_G (a, o = yAxisOffset, mx = maxY, mi = minY, c = cHeight ){
+   return(((a - o) * ((mx - mi) / c)) - mi)
+}
+
 
 function click(e) {
-    p1[0] = (e.offsetX - xAxisOffset - minX ) * (maxX - minX) / (cWidth - xAxisOffset)  - xAxisOffset
-    p1[1] = cHeight - e.offsetY
-    console.log(p1);
+  console.log(Date.now() - mdTime );
+  
+    //p1[0] = (e.offsetX - xAxisOffset - minX ) * (maxX - minX) / (cWidth - xAxisOffset)  - xAxisOffset
+    if (Date.now() - mdTime < 300){
+      if(nextPointIsOne){
+        p1[0] = convertX_M_G(e.offsetX)
+        p1[1] = convertY_M_G(cHeight - e.offsetY)
+      }
+      else{
+        p2[0] = convertX_M_G(e.offsetX)
+        p2[1] = convertY_M_G(cHeight - e.offsetY)
+      }
+    nextPointIsOne = !nextPointIsOne
+    console.log(p1, Date.now() - mdTime,  nextPointIsOne);
+    }
+    //console.log( p1[1] - p2[1]  (p1[0]-p2[0]) );
+    calculateGradinets()
     displayData()
 }
 
+function calculateGradinets(){
+  let dy = p1[1] - p2[1] 
+  let dx = p1[0] - p2[0]
+  let gradient = dy/dx
+  console.log(gradient);
+  
+
+}
+
+
+
 function mouseDown(e){
+    mdTime = Date.now()
+    // console.log(mdTime);
+    
     clickMouseX = e.offsetX
     clickMouseY = e.offsetY
-  document.getElementById('graph').addEventListener('mousemove', dragMouse)
+    document.getElementById('graph').addEventListener('mousemove', dragMouse)
+    displayData()
 }
 
   function dragMouse(e){
@@ -263,6 +301,11 @@ function mouseDown(e){
     drawAxisX(getLabels(minX, maxX, 12), scaleX, 20)
 
     drawPoint((p1[0] + minX) * scaleX + xAxisOffset, cHeight - yAxisOffset - (p1[1] + minY) * scaleY)
+    drawPoint((p2[0] + minX) * scaleX + xAxisOffset, cHeight - yAxisOffset - (p2[1] + minY) * scaleY)
+    ctx.beginPath()    
+      ctx.moveTo((p1[0] + minX) * scaleX + xAxisOffset, cHeight - yAxisOffset - (p1[1] + minY) * scaleY)
+      ctx.lineTo((p2[0] + minX) * scaleX + xAxisOffset, cHeight - yAxisOffset - (p2[1] + minY) * scaleY)
+      ctx.stroke()
   }
 
   function drawAxisX(arr, scaleX, tick = 10){
