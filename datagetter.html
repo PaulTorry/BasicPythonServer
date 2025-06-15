@@ -24,6 +24,7 @@
   <button onclick="getData()">Collect Batch</button>
   <button onclick="start()">Collect Run</button>
   <button onclick="downloadAll()">Download Saved data</button>
+  <p>Gradient: <span id="grad">___</span> ms<sup>-2</sup></p>
 
   <br />
   <br />
@@ -34,10 +35,7 @@
   <input type="number" id="maxy" name="maxy" value="1000" style="width: 4em" onchange="displayData()">
  --->
 
-  <label for="ts">trend start</label>
-  <input type="number" id="ts" name="ts" value="100" style="width: 4em" onchange="displayData()">
-  <label for="te">trend end</label>
-  <input type="number" id="te" name="te" value="200" style="width: 4em" onchange="displayData()">
+  
 
   <canvas width="1000" height="515" id="graph"></canvas>
   <table id="dataTable"></table>
@@ -65,7 +63,8 @@
   let mdTime = 0
 
   let dataTable = document.getElementById("dataTable")
-  
+  let grad = document.getElementById("grad")
+
   document.getElementById('graph').addEventListener('mousedown', mouseDown)
   document.getElementById('graph').addEventListener('click', click)
   
@@ -105,7 +104,7 @@ function calculateGradinets(){
   let gradient = dy/dx
   console.log(gradient);
   
-
+  return gradient
 }
 
 
@@ -225,18 +224,21 @@ function mouseDown(e){
     // console.log(scaleX, maxY);
     let dt = consecutiveDifference(times)
     let dx = consecutiveDifference(distances)
-    let speeds = dx.map((v, i) => dx[i] - dt[i])
+    let speeds = dx.map((v, i) => dx[i] / dt[i])
     // console.log(dt, dx, speeds);
 
     let tt = times.map(t => Math.floor((t - times[0]) * 1000))
-    let timesAndDistances = times.map((v, i) => [tt[i], distances[i]])
+    let timesAndDistances = times.map((v, i) => [tt[i]/1000, distances[i]/1000, Math.floor(speeds[i])/1000, dt[i], dx[i]])
 
     drawGraph(tt, distances, speeds)
 
-    let timesAndDistancesTable = timesAndDistances.map(v => '<tr><td>' + v[0] + '</td><td>' + v[1] + '</td></tr>')
+    let timesAndDistancesTable = timesAndDistances.map(v => '<tr><td>' + v[0] + '</td><td>' + v[1] + '</td><td>'+ v[2] + '</td></tr>')
     // console.log(timesAndDistancesTable.join(""));
 
-    dataTable.innerHTML = '<tr><th>time, t /s</th><th>distance, x /m</th></tr>' + timesAndDistancesTable.join("")
+    if (!(p2[1] === 0)) grad.innerHTML = Math.floor(calculateGradinets()*1000)/1000
+
+    dataTable.innerHTML = '<tr><th>time, t /s</th><th>  distance, x /m</th><th>  speed, v /ms<sup>-2</sup></th></tr>' + timesAndDistancesTable.join("")
+    
   }
 
 
@@ -281,13 +283,13 @@ function mouseDown(e){
 
     ctx.stroke();
 
+
     ctx.strokeStyle = "blue";
     ctx.beginPath()
     times.forEach((t, i) => { ctx.lineTo((t + minX)*scaleX + xAxisOffset, cHeight - yAxisOffset - (distances[i] + minY ) * scaleY) });
     ctx.stroke()
 
     ctx.moveTo((times[0] + minX) * scaleX, speeds[0] * scaleY)
-
     ctx.strokeStyle = "red";
     ctx.beginPath()
     times.forEach((t, i) => { ctx.lineTo((t + minX)* scaleX + xAxisOffset, cHeight - yAxisOffset - (speeds[i] + minY ) * scaleY) });
@@ -333,12 +335,13 @@ function mouseDown(e){
 
   }
 
-    function drawPoint(x, y){
+    function drawPoint(x, y, size = 10, colour = "black"){
+      ctx.strokeStyle = colour;
       ctx.beginPath()    
-      ctx.moveTo( x - 10, y - 10)
-      ctx.lineTo( x + 10, y + 10)
-      ctx.moveTo( x - 10, y + 10)
-      ctx.lineTo( x + 10, y - 10)
+      ctx.moveTo( x - size, y - size)
+      ctx.lineTo( x + size, y + size)
+      ctx.moveTo( x - size, y + size)
+      ctx.lineTo( x + size, y - size)
       ctx.stroke()
     }
 
@@ -349,7 +352,7 @@ function mouseDown(e){
     let man = range / 10**exp
     let mult = 1
    // console.log( start, end, maxAxisPoints, range, exp, man);
-   let t = 0
+    let t = 0
   //  while(t < 10){
   //       // console.log( start, end, maxAxisPoints, range, exp, man, "mult", mult);
   //   if (man*mult <= maxAxisPoints && man*mult >= (maxAxisPoints / 2)) return [...Array(Math.ceil(mult*man)).keys()].map(v => v*(10**exp))
