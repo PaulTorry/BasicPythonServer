@@ -68,13 +68,9 @@
   document.getElementById('graph').addEventListener('mousedown', mouseDown)
   document.getElementById('graph').addEventListener('click', click)
   
-function convertX_M_G (a, o = xAxisOffset, mx = maxX, mi = minX, c = cWidth ){
-   return(((a - o) * ((mx - mi) / c)) - mi)
-}
 
-function convertY_M_G (a, o = yAxisOffset, mx = maxY, mi = minY, c = cHeight ){
-   return(((a - o) * ((mx - mi) / c)) - mi)
-}
+
+
 
 
 function click(e) {
@@ -106,8 +102,6 @@ function calculateGradinets(){
   
   return gradient
 }
-
-
 
 function mouseDown(e){
     mdTime = Date.now()
@@ -217,7 +211,6 @@ function mouseDown(e){
     }
   }
 
-
   function displayData() {
 
 
@@ -241,7 +234,6 @@ function mouseDown(e){
     
   }
 
-
   async function downloadAll() {
     //console.log("Download all");
     const url = "http://" + document.getElementById("ip").value + ":" + document.getElementById("port").value  + "/allData"
@@ -260,22 +252,22 @@ function mouseDown(e){
     }
   }
 
-
   function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
   }
 
+function convertX_M_G (a, o = xAxisOffset, mx = maxX, mi = minX, c = cWidth ){
+   return(((a - o) * ((mx - mi) / c)) - mi)
+}
+
+function convertY_M_G (a, o = yAxisOffset, mx = maxY, mi = minY, c = cHeight ){
+   return(((a - o) * ((mx - mi) / c)) - mi)
+}
+
 
   function drawGraph(times, distances, speeds) {
-    //console.log(scaleX, scaleY);
-
-
     let scaleX  = (cWidth / (maxX - minX))
     let scaleY  = (cHeight / (maxY - minY))
-
-
-
-    //console.log(getLabels(0, maxX, 12))
 
     ctx = document.getElementById('graph').getContext('2d')
     ctx.clearRect(0, 0, cWidth, cHeight)
