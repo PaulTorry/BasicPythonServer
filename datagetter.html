@@ -24,6 +24,8 @@
   <button onclick="getData()">Collect Batch</button>
   <button onclick="start()">Collect Run</button>
   <button onclick="downloadAll()">Download Saved data</button>
+    <label for="average">Moving average</label>
+  <input type="checkbox" id="average" name="average">
   <p>Gradient: <span id="grad">___</span> ms<sup>-2</sup></p>
 
   <br />
@@ -67,7 +69,7 @@
 
   document.getElementById('graph').addEventListener('mousedown', mouseDown)
   document.getElementById('graph').addEventListener('click', click)
-  
+  document.getElementById('average').addEventListener('change', displayData)
 
 
 
@@ -98,8 +100,6 @@ function calculateGradinets(){
   let dy = p1[1] - p2[1] 
   let dx = p1[0] - p2[0]
   let gradient = dy/dx
-  console.log(gradient);
-  
   return gradient
 }
 
@@ -188,6 +188,14 @@ function mouseDown(e){
     return res;
   };
 
+  const movingAverage = arr => {
+    const res = [];
+    for (let i = 0; i < arr.length; i++) {
+      if (arr[i + 1]) {res.push((arr[i + 1] + arr[i])/2);};
+    };
+    return res;
+  }
+
   async function getData(remaingReadings = 0) {
     //console.log("getting current data");
     const url = "http://" + document.getElementById("ip").value + ":" + document.getElementById("port").value  + "/data?x" + document.getElementById("batch").value + "y" + document.getElementById("delay").value + "z"
@@ -212,26 +220,18 @@ function mouseDown(e){
   }
 
   function displayData() {
-
-
-    // console.log(scaleX, maxY);
     let dt = consecutiveDifference(times)
     let dx = consecutiveDifference(distances)
     let speeds = dx.map((v, i) => dx[i] / dt[i])
-    // console.log(dt, dx, speeds);
-
     let tt = times.map(t => Math.floor((t - times[0]) * 1000))
     let timesAndDistances = times.map((v, i) => [tt[i]/1000, distances[i]/1000, Math.floor(speeds[i])/1000, dt[i], dx[i]])
 
-    drawGraph(tt, distances, speeds)
+    if (document.getElementById('average').checked) drawGraph(tt, movingAverage(distances), movingAverage(speeds))
+    else drawGraph(tt, distances, speeds)
 
     let timesAndDistancesTable = timesAndDistances.map(v => '<tr><td>' + v[0] + '</td><td>' + v[1] + '</td><td>'+ v[2] + '</td></tr>')
-    // console.log(timesAndDistancesTable.join(""));
-
     if (!(p2[1] === 0)) grad.innerHTML = Math.floor(calculateGradinets()*1000)/1000
-
     dataTable.innerHTML = '<tr><th>time, t /s</th><th>  distance, x /m</th><th>  speed, v /ms<sup>-2</sup></th></tr>' + timesAndDistancesTable.join("")
-    
   }
 
   async function downloadAll() {
@@ -280,17 +280,12 @@ function convertY_G_M (a, o = yAxisOffset, mx = maxY, mi = minY, c = cHeight ){
     ctx = document.getElementById('graph').getContext('2d')
     ctx.clearRect(0, 0, cWidth, cHeight)
     ctx.moveTo((times[0] + minX)*scaleX, distances[0] * scaleY)
-
     ctx.stroke();
 
-convertX_G_M(p1[0]),convertY_G_M(p1[1])
     ctx.strokeStyle = "lightblue";
     ctx.beginPath()
-     times.forEach((t, i) => { ctx.lineTo(convertX_G_M(t),convertY_G_M(distances[i]))});
-    // times.forEach((t, i) => { ctx.lineTo((t + minX)*scaleX + xAxisOffset, cHeight - yAxisOffset - (distances[i] + minY ) * scaleY) });
-    
+    times.forEach((t, i) => { ctx.lineTo(convertX_G_M(t),convertY_G_M(distances[i]))});
     ctx.stroke()
-
     ctx.moveTo((times[0] + minX) * scaleX, speeds[0] * scaleY)
     ctx.strokeStyle = "mistyrose";
     ctx.beginPath()
@@ -307,15 +302,13 @@ convertX_G_M(p1[0]),convertY_G_M(p1[1])
     drawAxisX(getLabels(minX, maxX, 12).map(v => v/10), scaleX)
     drawAxisX(getLabels(minX, maxX, 12), scaleX, 20)
 
-    //drawPoint((p1[0] + minX) * scaleX + xAxisOffset, cHeight - yAxisOffset - (p1[1] + minY) * scaleY)
-
     drawPoint(convertX_G_M(p1[0]),convertY_G_M(p1[1]))
     drawPoint(convertX_G_M(p2[0]),convertY_G_M(p2[1]))
 
     ctx.beginPath()    
-      ctx.moveTo(convertX_G_M(p1[0]),convertY_G_M(p1[1]))
-      ctx.lineTo(convertX_G_M(p2[0]),convertY_G_M(p2[1]))
-      ctx.stroke()
+    ctx.moveTo(convertX_G_M(p1[0]),convertY_G_M(p1[1]))
+    ctx.lineTo(convertX_G_M(p2[0]),convertY_G_M(p2[1]))
+    ctx.stroke()
   }
 
   function drawAxisX(arr, scaleX, tick = 10){
@@ -326,11 +319,10 @@ convertX_G_M(p1[0]),convertY_G_M(p1[1])
       ctx.stroke()
       ctx.fillText(v, (v + minX) * scaleX + xAxisOffset, cHeight - yAxisOffset + 20)
     })
+      ctx.fillText("time, t / ms", cWidth - 50, cHeight - 10)
   }
 
   function drawAxisY(arr, scaleY, tick = 10){
-    // console.log(arr);
-    
     arr.forEach(v => {
       ctx.beginPath()    
       ctx.moveTo( xAxisOffset + 0, cHeight - yAxisOffset - (v + minY) * scaleY )
@@ -338,9 +330,15 @@ convertX_G_M(p1[0]),convertY_G_M(p1[1])
       ctx.stroke()
       ctx.fillText(v, xAxisOffset, cHeight - yAxisOffset - (v + minY) * scaleY)
     })
-
-
-
+ ctx.save();
+ ctx.translate(10, 90);
+ ctx.rotate(-Math.PI/2);
+ //ctx.textAlign = "center";
+ ctx.fillStyle = "blue";
+ ctx.fillText("displacement, d /m", 0, 0);
+ ctx.fillStyle = "red";
+ ctx.fillText("velocity,  v /ms-2",10, 10);
+ ctx.restore();
   }
 
     function drawPoint(x, y, size = 10, colour = "black"){
