@@ -80,11 +80,11 @@ function click(e) {
     if (Date.now() - mdTime < 300){
       if(nextPointIsOne){
         p1[0] = convertX_M_G(e.offsetX)
-        p1[1] = convertY_M_G(cHeight - e.offsetY)
+        p1[1] = convertY_M_G(e.offsetY)
       }
       else{
         p2[0] = convertX_M_G(e.offsetX)
-        p2[1] = convertY_M_G(cHeight - e.offsetY)
+        p2[1] = convertY_M_G(e.offsetY)
       }
     nextPointIsOne = !nextPointIsOne
     console.log(p1, Date.now() - mdTime,  nextPointIsOne);
@@ -261,7 +261,15 @@ function convertX_M_G (a, o = xAxisOffset, mx = maxX, mi = minX, c = cWidth ){
 }
 
 function convertY_M_G (a, o = yAxisOffset, mx = maxY, mi = minY, c = cHeight ){
-   return(((a - o) * ((mx - mi) / c)) - mi)
+   return(((c - a - o) * ((mx - mi) / c)) - mi)
+}
+
+function convertX_G_M (a, o = xAxisOffset, mx = maxX, mi = minX, c = cWidth ){
+   return(((a + mi)*c/(mx - mi)) + o) 
+}
+
+function convertY_G_M (a, o = yAxisOffset, mx = maxY, mi = minY, c = cHeight ){
+   return c - (o + (a + mi)*c/(mx - mi))
 }
 
 
@@ -275,17 +283,22 @@ function convertY_M_G (a, o = yAxisOffset, mx = maxY, mi = minY, c = cHeight ){
 
     ctx.stroke();
 
-
-    ctx.strokeStyle = "blue";
+convertX_G_M(p1[0]),convertY_G_M(p1[1])
+    ctx.strokeStyle = "lightblue";
     ctx.beginPath()
-    times.forEach((t, i) => { ctx.lineTo((t + minX)*scaleX + xAxisOffset, cHeight - yAxisOffset - (distances[i] + minY ) * scaleY) });
+     times.forEach((t, i) => { ctx.lineTo(convertX_G_M(t),convertY_G_M(distances[i]))});
+    // times.forEach((t, i) => { ctx.lineTo((t + minX)*scaleX + xAxisOffset, cHeight - yAxisOffset - (distances[i] + minY ) * scaleY) });
+    
     ctx.stroke()
 
     ctx.moveTo((times[0] + minX) * scaleX, speeds[0] * scaleY)
-    ctx.strokeStyle = "red";
+    ctx.strokeStyle = "mistyrose";
     ctx.beginPath()
-    times.forEach((t, i) => { ctx.lineTo((t + minX)* scaleX + xAxisOffset, cHeight - yAxisOffset - (speeds[i] + minY ) * scaleY) });
+    times.forEach((t, i) => { ctx.lineTo(convertX_G_M(t),convertY_G_M(speeds[i]))});
     ctx.stroke()
+
+    times.forEach((t, i) => { drawPoint(convertX_G_M(t),convertY_G_M(distances[i]),5,"blue")});
+    times.forEach((t, i) => { drawPoint(convertX_G_M(t),convertY_G_M(speeds[i]),5,"red")});
 
     ctx.strokeStyle = "black";
 
@@ -294,11 +307,14 @@ function convertY_M_G (a, o = yAxisOffset, mx = maxY, mi = minY, c = cHeight ){
     drawAxisX(getLabels(minX, maxX, 12).map(v => v/10), scaleX)
     drawAxisX(getLabels(minX, maxX, 12), scaleX, 20)
 
-    drawPoint((p1[0] + minX) * scaleX + xAxisOffset, cHeight - yAxisOffset - (p1[1] + minY) * scaleY)
-    drawPoint((p2[0] + minX) * scaleX + xAxisOffset, cHeight - yAxisOffset - (p2[1] + minY) * scaleY)
+    //drawPoint((p1[0] + minX) * scaleX + xAxisOffset, cHeight - yAxisOffset - (p1[1] + minY) * scaleY)
+
+    drawPoint(convertX_G_M(p1[0]),convertY_G_M(p1[1]))
+    drawPoint(convertX_G_M(p2[0]),convertY_G_M(p2[1]))
+
     ctx.beginPath()    
-      ctx.moveTo((p1[0] + minX) * scaleX + xAxisOffset, cHeight - yAxisOffset - (p1[1] + minY) * scaleY)
-      ctx.lineTo((p2[0] + minX) * scaleX + xAxisOffset, cHeight - yAxisOffset - (p2[1] + minY) * scaleY)
+      ctx.moveTo(convertX_G_M(p1[0]),convertY_G_M(p1[1]))
+      ctx.lineTo(convertX_G_M(p2[0]),convertY_G_M(p2[1]))
       ctx.stroke()
   }
 
