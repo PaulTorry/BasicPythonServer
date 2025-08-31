@@ -6,30 +6,74 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta http-equiv="X-UA-Compatible" content="ie=edge">
   <title>Datalogger program v0.12</title>
+
+  <style>
+    #advanced {
+      display:none;
+    }
+    #grad{
+      font-weight: bold;
+      color: red;
+    }
+    #grad2{
+      font-weight: bold;
+      color: blue;
+    }
+  </style>
+
 </head>
 
 <body onload="changeDisplayedIP();changeDisplayedPort();displayData()">
 
-  <label for="ip">IP</label>
-  <input type="text" id="ip" name="ip" onchange="changeStoredIP()" value="192.168.178.187">
-  <label for="port">IP</label>
-  <input type="text" id="port" name="port" onchange="changeStoredPort()" value="8080">
-  <label for="ip">delay</label>
-  <input type="text" id="delay" name="delay" value="10" size="1">
-  <label for="ip">batch</label>
+  
+
+  <div id="advanced">
+      <br />
+  <label for="port">Port</label>
+  <input type="text" id="port" name="port" onchange="changeStoredPort()" value="8080" size="3">
+  
+  <label for="pings">number of pings</label>
+  <input type="text" id="pings" name="pings" value="25" size="1">
+  <label for="wait">wait time</label>
+  <input type="text" id="wait" name="wait" value="5" size="1">
+  
+  <label for="delay">sensor delay</label>
+  <input type="text" id="delay" name="delay" value="5" size="1">
+  <label for="batch">sensor batch</label>
   <input type="text" id="batch" name="batch" value="1" size="1">
 
-  <br />
-  <br />
-  <button onclick="getData()">Collect Batch</button>
-  <button onclick="start()">Collect Run</button>
+  <button onclick="getData()">Collect One Batch</button>
   <button onclick="downloadAll()">Download Saved data</button>
-    <label for="average">Moving average</label>
-  <input type="checkbox" id="average" name="average">
-  <p>Gradient: <span id="grad">___</span> ms<sup>-2</sup></p>
+     <br />
+        <br />
+  </div>
+  <label for="showAdv">Advanced</label>
+  <input type="checkbox" id="showAdv" name="showAdv">
+ <br />
+<label for="ip">IP</label>
+  <input type="text" id="ip" name="ip" onchange="changeStoredIP()" value="192.168.178.187">
 
-  <br />
-  <br />
+  <button onclick="start()"><b>Start Run</b></button>
+  <button onclick="stopRun()">Stop Run</button>
+  
+
+
+ &nbsp&nbsp&nbsp
+    <label for="showV">Velocity</label>
+  <input type="checkbox" id="showV" name="showV" checked="true">
+  &nbsp&nbsp&nbsp
+      <label for="showS">Displacement</label>
+  <input type="checkbox" id="showS" name="showS" checked="true">
+&nbsp&nbsp&nbsp
+    <label for="average">Average</label>
+  <input type="checkbox" id="average" name="average">
+  &nbsp&nbsp&nbsp
+      <label for="autoScale">AutoScale</label>
+  <input type="checkbox" id="autoScale" name="autoScale" checked="true">
+ <br /> <br />
+  <span id="vGrad">Gradient of v/t: <span id="grad">___</span> ms<sup>-2</sup></span>
+    &nbsp&nbsp&nbsp<span id="sGrad">Gradient of s/t: <span id="grad2">___</span> ms<sup>-1</sup></span>
+ <br /> <br />
 
   <!-- <label for="maxx">max x</label>
   <input type="number" id="maxx" name="maxx" value="2550" style="width: 4em" onchange="displayData()">
@@ -53,6 +97,8 @@
   let cHeight = 515 
   let clickMouseX = 0
   let clickMouseY = 0
+  let clickMaxX = 100
+  let clickMaxY = 100
 
   let mouseScale = 1
   let nextPointIsOne = true
@@ -63,14 +109,17 @@
   let yAxisOffset = 40
   let xAxisOffset = 40
   let mdTime = 0
+  let stopped = false
 
   let dataTable = document.getElementById("dataTable")
-  let grad = document.getElementById("grad")
 
   document.getElementById('graph').addEventListener('mousedown', mouseDown)
   document.getElementById('graph').addEventListener('click', click)
   document.getElementById('average').addEventListener('change', displayData)
-
+  document.getElementById('autoScale').addEventListener('change', displayData)
+  document.getElementById('showS').addEventListener('change', showSgrad)
+    document.getElementById('showV').addEventListener('change', showVgrad)
+  document.getElementById('showAdv').addEventListener('change', showAdv)
 
 
 
@@ -106,14 +155,95 @@ function calculateGradinets(){
 function mouseDown(e){
     mdTime = Date.now()
     // console.log(mdTime);
-    
+    document.getElementById('autoScale').checked = false
     clickMouseX = e.offsetX
     clickMouseY = e.offsetY
-    document.getElementById('graph').addEventListener('mousemove', dragMouse)
+    clickMinX = minX
+    clickMinY = minY
+    clickMaxX = maxX
+    clickMaxY = maxY
+
+    if (e.offsetY > cHeight - yAxisOffset){
+    document.getElementById('graph').addEventListener('mousemove', moveX)
+    document.getElementById('graph').addEventListener('mouseleave', () => removeEventListener("mousemove", moveX))
+
+    } else if (e.offsetX < xAxisOffset){
+    document.getElementById('graph').addEventListener('mousemove', moveY)
+    document.getElementById('graph').addEventListener('mouseleave', () => removeEventListener("mousemove", moveY))
+
+    } else {
+    document.getElementById('graph').addEventListener('mousemove', scaleXY)
+    document.getElementById('graph').addEventListener('mouseleave', () => removeEventListener("mousemove", scaleXY))
+
+    }
+
+    // document.getElementById('graph').addEventListener('mousemove', dragMouse)
+    // document.getElementById('graph').addEventListener('mouseleave', () => removeEventListener("mousemove", dragMouse))
     displayData()
 }
 
-  function dragMouse(e){
+function moveX(e){
+  if (event.buttons == 0) {
+    document.getElementById('graph').removeEventListener("mousemove", moveX);
+  } else {
+    let dev = (e.offsetX - clickMouseX) * (maxX - minX) / (cWidth)
+    minX = clickMinX + dev
+    maxX = clickMaxX + dev
+  }
+  displayData()
+}
+
+function moveY(e){
+  if (event.buttons == 0) {
+    document.getElementById('graph').removeEventListener("mousemove", moveY);
+  } else {
+        let devv = (e.offsetY - clickMouseY) * (maxY - minY) / (cHeight)
+        minY = clickMinY - devv
+        maxY = clickMaxY - devv
+  }
+  displayData()
+}
+
+function scaleXY(e){
+  if (event.buttons == 0) {
+    document.getElementById('graph').removeEventListener("mousemove", scaleXY);
+  } else {
+        maxX = ((clickMaxX )* (1 + (clickMouseX - e.offsetX) / clickMouseX))
+        maxY = (clickMaxY)* (1 + (e.offsetY - clickMouseY) / clickMouseY)
+  }
+  console.log(maxX, maxY, minX, minY);
+  
+  displayData()
+}
+
+  function dragMouse(e){  // Replaced by separate drag functions
+    // console.log(  clickMouseX , e.offsetX);
+    
+        if (event.buttons == 0) {
+          document.getElementById('graph').removeEventListener("mousemove", dragMouse);
+         } else {
+      //  console.log(event.offsetX, event.offsetY )//- document.getElementById('graph').getBoundingClientRect().y)
+      // console.log(document.getElementById('graph').getBoundingClientRect())
+
+      if (e.offsetY > cHeight - yAxisOffset){
+        let dev = (e.offsetX - clickMouseX) * (maxX - minX) / (cWidth)
+        minX = clickMinX + dev
+        maxX = clickMaxX + dev
+      } else if (e.offsetX < xAxisOffset){
+        let devv = (e.offsetY - clickMouseY) * (maxY - minY) / (cHeight)
+        minY = clickMinY - devv
+        maxY = clickMaxX - devv
+      } else {
+       // maxX = ((maxX - xAxisOffset)* (1 + (clickMouseX - e.offsetX) / clickMouseX)) + xAxisOffset
+        maxX = (clickMaxX )* (1 + (clickMouseX - e.offsetX) / clickMouseX)
+        maxY = (clickMaxY )* (1 + (e.offsetY - clickMouseY) / clickMouseY) 
+      } 
+
+    }  
+    displayData()
+  }
+
+    function dragMouseOld(e){
     // console.log(  clickMouseX , e.offsetX);
     
         if (event.buttons == 0) {
@@ -131,7 +261,8 @@ function mouseDown(e){
         minY -= devv
         maxY -= devv
       } else {
-        maxX = (maxX - xAxisOffset)* (1 + (clickMouseX - e.offsetX) / clickMouseX) + xAxisOffset
+       // maxX = ((maxX - xAxisOffset)* (1 + (clickMouseX - e.offsetX) / clickMouseX)) + xAxisOffset
+        maxX = ((maxX )* (1 + (clickMouseX - e.offsetX) / clickMouseX))
         maxY = (maxY - yAxisOffset)* (1 + (e.offsetY - clickMouseY) / clickMouseY) + yAxisOffset
       } 
       clickMouseX = e.offsetX
@@ -139,6 +270,22 @@ function mouseDown(e){
     }  
     displayData()
   }
+
+ function showAdv(e){
+    if (document.getElementById('showAdv').checked) document.getElementById('advanced').style.display = "block"
+    else document.getElementById('advanced').style.display = "none"
+ }
+
+ function showSgrad(e){
+      if (document.getElementById('showS').checked) document.getElementById('sGrad').style.display = "inline"
+    else document.getElementById('sGrad').style.display = "none"
+displayData()
+ }
+  function showVgrad(e){
+      if (document.getElementById('showV').checked) document.getElementById('vGrad').style.display = "inline"
+    else document.getElementById('vGrad').style.display = "none"
+displayData()
+ }
 
   function changeStoredIP() {
     localStorage.setItem("IP", JSON.stringify(document.getElementById("ip").value))
@@ -165,7 +312,10 @@ function mouseDown(e){
   async function start() {
     //console.log("Starting run")
     const url = "http://" + document.getElementById("ip").value + ":" + document.getElementById("port").value  + "/startRun" 
-    //console.log("Starting run:   ", url);
+    const ping = document.getElementById("pings").value
+    const wait = document.getElementById("wait").value
+    stopped = false
+    console.log("Starting run:   ", url, "n Ping: ", 2*ping/2, "n wait: ", 2*wait/2);
     try {
       const response = await fetch(url);
       if (!response.ok) {
@@ -177,7 +327,11 @@ function mouseDown(e){
     } catch (error) {
       console.error(error.message);
     }
-    getData(8)
+    getData(ping, wait)
+  }
+
+  function stopRun(){
+    stopped = true
   }
 
   const consecutiveDifference = arr => {
@@ -196,9 +350,10 @@ function mouseDown(e){
     return res;
   }
 
-  async function getData(remaingReadings = 0) {
+  async function getData(remaingReadings = 0, wait = 1) {
     //console.log("getting current data");
     const url = "http://" + document.getElementById("ip").value + ":" + document.getElementById("port").value  + "/data?x" + document.getElementById("batch").value + "y" + document.getElementById("delay").value + "z"
+
     console.log("getting current data:   ", url);
 
     try {
@@ -213,24 +368,48 @@ function mouseDown(e){
 
     } catch (error) {console.error(error.message);}
 
-    if (remaingReadings > 0) {
-      //sleep(1).then(() => { getData(remaingReadings -1) });
-      getData(remaingReadings - 1)
+    if (remaingReadings > 0 && !stopped) {
+      sleep(wait).then(() => { getData(remaingReadings -1) });
+     // getData(remaingReadings - 1)
     }
   }
 
+
   function displayData() {
+    console.log("displayData");
+    
     let dt = consecutiveDifference(times)
+    let mt = consecutiveDifference(movingAverage(times))
     let dx = consecutiveDifference(distances)
+    let mx = consecutiveDifference(movingAverage(distances))
     let speeds = dx.map((v, i) => dx[i] / dt[i])
+    let mspeeds = mx.map((v, i) => mx[i] / mt[i])
     let tt = times.map(t => Math.floor((t - times[0]) * 1000))
+    let mtt = movingAverage(times).map(t => Math.floor((t - times[0]) * 1000))
     let timesAndDistances = times.map((v, i) => [tt[i]/1000, distances[i]/1000, Math.floor(speeds[i])/1000, dt[i], dx[i]])
 
-    if (document.getElementById('average').checked) drawGraph(tt, movingAverage(distances), movingAverage(speeds))
+
+    //console.log(distances, speeds);
+    let verticalArrayforMaxMin = []
+    if (document.getElementById('autoScale').checked) {
+      if (document.getElementById("showS").checked){verticalArrayforMaxMin = verticalArrayforMaxMin.concat(movingAverage(distances))}
+      if (document.getElementById("showV").checked){verticalArrayforMaxMin = verticalArrayforMaxMin.concat(mspeeds)}
+      console.log(verticalArrayforMaxMin);
+            console.log(Math.max(...verticalArrayforMaxMin), Math.min(0, ...verticalArrayforMaxMin));
+      maxX = Math.max(...tt) + 100
+      maxY = (Math.max(...verticalArrayforMaxMin) - 2*Math.min(...verticalArrayforMaxMin))*1.5
+      minX = 0
+      minY = -Math.min(...verticalArrayforMaxMin)*1.5
+    }
+
+    if (document.getElementById('average').checked) drawGraph(mtt, movingAverage(distances), mspeeds)
     else drawGraph(tt, distances, speeds)
 
     let timesAndDistancesTable = timesAndDistances.map(v => '<tr><td>' + v[0] + '</td><td>' + v[1] + '</td><td>'+ v[2] + '</td></tr>')
-    if (!(p2[1] === 0)) grad.innerHTML = Math.floor(calculateGradinets()*1000)/1000
+    if (!(p2[1] === 0)) {
+      document.getElementById("grad").innerHTML = Math.floor(calculateGradinets()*1000)/1000
+      document.getElementById("grad2").innerHTML = Math.floor(calculateGradinets()*1000)/1000
+    }
     dataTable.innerHTML = '<tr><th>time, t /s</th><th>  distance, x /m</th><th>  speed, v /ms<sup>-2</sup></th></tr>' + timesAndDistancesTable.join("")
   }
 
@@ -279,21 +458,34 @@ function convertY_G_M (a, o = yAxisOffset, mx = maxY, mi = minY, c = cHeight ){
 
     ctx = document.getElementById('graph').getContext('2d')
     ctx.clearRect(0, 0, cWidth, cHeight)
+    ctx.strokeStyle = "lightgray";
+    ctx.rect(0,cHeight-40,cWidth-0,-cHeight+40)
+    ctx.rect(40,cHeight-0,cWidth-40,-cHeight)
+    ctx.rect(convertX_G_M(0),convertY_G_M(0) , 100000, -100000)
+    ctx.rect(convertX_G_M(0),convertY_G_M(0) , -100000, 100000)
+
+
     ctx.moveTo((times[0] + minX)*scaleX, distances[0] * scaleY)
     ctx.stroke();
 
+    if(document.getElementById('showS').checked) {
     ctx.strokeStyle = "lightblue";
     ctx.beginPath()
     times.forEach((t, i) => { ctx.lineTo(convertX_G_M(t),convertY_G_M(distances[i]))});
     ctx.stroke()
     ctx.moveTo((times[0] + minX) * scaleX, speeds[0] * scaleY)
+    times.forEach((t, i) => { drawPoint(convertX_G_M(t),convertY_G_M(distances[i]),5,"blue")});
+    }
+
+if(document.getElementById('showV').checked) {
     ctx.strokeStyle = "mistyrose";
     ctx.beginPath()
     times.forEach((t, i) => { ctx.lineTo(convertX_G_M(t),convertY_G_M(speeds[i]))});
     ctx.stroke()
 
-    times.forEach((t, i) => { drawPoint(convertX_G_M(t),convertY_G_M(distances[i]),5,"blue")});
-    times.forEach((t, i) => { drawPoint(convertX_G_M(t),convertY_G_M(speeds[i]),5,"red")});
+     times.forEach((t, i) => { drawPoint(convertX_G_M(t),convertY_G_M(speeds[i]),5,"red")});
+}
+
 
     ctx.strokeStyle = "black";
 
@@ -335,9 +527,9 @@ function convertY_G_M (a, o = yAxisOffset, mx = maxY, mi = minY, c = cHeight ){
  ctx.rotate(-Math.PI/2);
  //ctx.textAlign = "center";
  ctx.fillStyle = "blue";
- ctx.fillText("displacement, d /m", 0, 0);
+ ctx.fillText("displacement, d /mm", 0, 0);
  ctx.fillStyle = "red";
- ctx.fillText("velocity,  v /ms-2",10, 10);
+ ctx.fillText("velocity,  v /mm.s-1",10, 10);
  ctx.restore();
   }
 
